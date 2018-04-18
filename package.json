@@ -1,0 +1,19 @@
+{
+  "name": "nl2code",
+  "version": "1.0.0",
+  "description": "A syntactic neural model for parsing natural language to executable code [paper](https://arxiv.org/abs/1704.01696).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pcyin/NL2code.git"
+  },
+  "author": "Kai Yang",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pcyin/NL2code/issues"
+  },
+  "homepage": "https://github.com/pcyin/NL2code#readme"
+}
