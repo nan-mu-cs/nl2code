@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/pcyin/NL2code/issues"
   },
-  "homepage": "https://github.com/pcyin/NL2code#readme"
+  "homepage": "https://github.com/pcyin/NL2code#readme",
+  "dependencies": {
+    "sqlite-parser": "^1.0.1"
+  }
 }
