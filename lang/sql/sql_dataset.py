@@ -185,9 +185,9 @@ def parse_dataset():
     MAX_QUERY_LENGTH = 70 # FIXME: figure out the best config!
     WORD_FREQ_CUT_OFF = 3
 
-    nl_file = '../../data/data.nl'
-    sql_file = '../../data/data.sql'
-    ast_file = '../../data/ast.json'
+    nl_file = './data/data.nl'
+    sql_file = './data/data.sql'
+    ast_file = './data/ast.json'
     data = preprocess_sql_dataset(nl_file, sql_file,ast_file)
     parse_trees = [e['parse_tree'] for e in data]
 
@@ -360,7 +360,7 @@ def parse_dataset():
     test_data.init_data_matrices(max_query_length=70, max_example_action_num=350)
 
     serialize_to_file((train_data, dev_data, test_data),
-                      '../../data/sql.freq{WORD_FREQ_CUT_OFF}.max_action350.pre_suf.unary_closure.bin'.format(WORD_FREQ_CUT_OFF=WORD_FREQ_CUT_OFF))
+                      './data/sql.freq{WORD_FREQ_CUT_OFF}.max_action350.pre_suf.unary_closure.bin'.format(WORD_FREQ_CUT_OFF=WORD_FREQ_CUT_OFF))
 
     return train_data, dev_data, test_data
 
