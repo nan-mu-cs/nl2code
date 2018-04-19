@@ -1,5 +1,5 @@
 output="runs"
-device="gpu"
+device="cuda"
 
 #if [ "$1" == "hs" ]; then
 #	# hs dataset
