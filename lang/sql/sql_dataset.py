@@ -1,17 +1,18 @@
 # -*- coding: UTF-8 -*-
 from __future__ import division
 import ast
-import astor
+# import astor
 import logging
 from itertools import chain
 import nltk
 import re
+import json
 
 from nn.utils.io_utils import serialize_to_file, deserialize_from_file
 from nn.utils.generic_utils import init_logging
 
 from dataset import gen_vocab, DataSet, DataEntry, Action, APPLY_RULE, GEN_TOKEN, COPY_TOKEN, GEN_COPY_TOKEN, Vocab
-from lang.py.parse import parse, parse_tree_to_python_ast, canonicalize_code, get_grammar, parse_raw, \
+from lang.sql.parse import parse, parse_tree_to_python_ast, canonicalize_code, get_grammar, parse_raw, \
     de_canonicalize_code, tokenize_code, tokenize_code_adv, de_canonicalize_code_for_seq2seq
 from lang.py.unaryclosure import get_top_unary_closures, apply_unary_closures
 
@@ -130,36 +131,38 @@ def process_heart_stone_dataset():
     print 'avg. nums of rules: %f' % (rule_num / example_num)
 
 
-def canonicalize_hs_example(query, code):
+def canonicalize_sql_example(query, sql, ast):
     query = re.sub(r'<.*?>', '', query)
     query_tokens = nltk.word_tokenize(query)
 
-    code = code.replace('§', '\n').strip()
+    # sql = sql.replace('§', '\n').strip()
 
     # sanity check
-    parse_tree = parse_raw(code)
-    gold_ast_tree = ast.parse(code).body[0]
-    gold_source = astor.to_source(gold_ast_tree)
-    ast_tree = parse_tree_to_python_ast(parse_tree)
-    pred_source = astor.to_source(ast_tree)
+    parse_tree = parse_raw(ast)
+    # gold_ast_tree = ast.parse(sql).body[0]
+    # gold_source = astor.to_source(gold_ast_tree)
+    # ast_tree = parse_tree_to_python_ast(parse_tree)
+    # pred_source = astor.to_source(ast_tree)
 
-    assert gold_source == pred_source, 'sanity check fails: gold=[%s], actual=[%s]' % (gold_source, pred_source)
+    # assert gold_source == pred_source, 'sanity check fails: gold=[%s], actual=[%s]' % (gold_source, pred_source)
 
-    return query_tokens, code, parse_tree
+    return query_tokens, sql, parse_tree
 
 
-def preprocess_hs_dataset(annot_file, code_file):
-    f = open('hs_dataset.examples.txt', 'w')
-
+def preprocess_sql_dataset(nl_file, sql_file,ast_file):
+    f = open('sql_dataset.examples.txt', 'w')
+    ast_f = open(ast_file,'r')
+    ast_data = json.load(ast_f)
+    ast_data = ast_data["statement"]
     examples = []
 
-    for idx, (annot, code) in enumerate(zip(open(annot_file), open(code_file))):
-        annot = annot.strip()
-        code = code.strip()
+    for idx, (nl, sql,ast) in enumerate(zip(open(nl_file), open(sql_file),ast_data)):
+        nl = nl.strip()
+        sql = sql.strip()
 
-        clean_query_tokens, clean_code, parse_tree = canonicalize_hs_example(annot, code)
+        clean_query_tokens, clean_code, parse_tree = canonicalize_sql_example(nl, sql,ast)
         example = {'id': idx, 'query_tokens': clean_query_tokens, 'code': clean_code, 'parse_tree': parse_tree,
-                   'str_map': None, 'raw_code': code}
+                   'str_map': None, 'raw_code': sql}
         examples.append(example)
 
         f.write('*' * 50 + '\n')
@@ -178,14 +181,14 @@ def preprocess_hs_dataset(annot_file, code_file):
     return examples
 
 
-def parse_hs_dataset():
+def parse_dataset():
     MAX_QUERY_LENGTH = 70 # FIXME: figure out the best config!
     WORD_FREQ_CUT_OFF = 3
 
-    annot_file = '/Users/yinpengcheng/Research/SemanticParsing/CodeGeneration/card_datasets/hearthstone/all_hs.mod.in'
-    code_file = '/Users/yinpengcheng/Research/SemanticParsing/CodeGeneration/card_datasets/hearthstone/all_hs.out'
-
-    data = preprocess_hs_dataset(annot_file, code_file)
+    nl_file = '../../data/data.nl'
+    sql_file = '../../data/data.sql'
+    ast_file = '../../data/ast.json'
+    data = preprocess_sql_dataset(nl_file, sql_file,ast_file)
     parse_trees = [e['parse_tree'] for e in data]
 
     # apply unary closures
@@ -196,12 +199,12 @@ def parse_hs_dataset():
     # build the grammar
     grammar = get_grammar(parse_trees)
 
-    with open('hs.grammar.unary_closure.txt', 'w') as f:
+    with open('sql.grammar.unary_closure.txt', 'w') as f:
         for rule in grammar:
             f.write(rule.__repr__() + '\n')
 
-    annot_tokens = list(chain(*[e['query_tokens'] for e in data]))
-    annot_vocab = gen_vocab(annot_tokens, vocab_size=5000, freq_cutoff=WORD_FREQ_CUT_OFF)
+    nl_tokens = list(chain(*[e['query_tokens'] for e in data]))
+    nl_vocab = gen_vocab(nl_tokens, vocab_size=5000, freq_cutoff=WORD_FREQ_CUT_OFF)
 
     def get_terminal_tokens(_terminal_str):
         """
@@ -233,13 +236,15 @@ def parse_hs_dataset():
                     assert len(terminal_token) > 0
                     all_terminal_tokens.append(terminal_token)
 
-    terminal_vocab = gen_vocab(all_terminal_tokens, vocab_size=5000, freq_cutoff=WORD_FREQ_CUT_OFF)
+    # print all_terminal_tokens
 
+    terminal_vocab = gen_vocab(all_terminal_tokens, vocab_size=5000, freq_cutoff=WORD_FREQ_CUT_OFF)
+    # print terminal_vocab
     # now generate the dataset!
 
-    train_data = DataSet(annot_vocab, terminal_vocab, grammar, 'hs.train_data')
-    dev_data = DataSet(annot_vocab, terminal_vocab, grammar, 'hs.dev_data')
-    test_data = DataSet(annot_vocab, terminal_vocab, grammar, 'hs.test_data')
+    train_data = DataSet(nl_vocab, terminal_vocab, grammar, 'sql.train_data')
+    dev_data = DataSet(nl_vocab, terminal_vocab, grammar, 'sql.dev_data')
+    test_data = DataSet(nl_vocab, terminal_vocab, grammar, 'sql.test_data')
 
     all_examples = []
 
@@ -260,7 +265,7 @@ def parse_hs_dataset():
 
         for rule_count, rule in enumerate(rule_list):
             if not grammar.is_value_node(rule.parent):
-                assert rule.value is None
+                assert rule.value is None,rule.value
                 parent_rule = rule_parents[(rule_count, rule)][0]
                 if parent_rule:
                     parent_t = rule_pos_map[parent_rule]
@@ -274,7 +279,7 @@ def parse_hs_dataset():
 
                 actions.append(action)
             else:
-                assert rule.is_leaf
+                assert rule.is_leaf,rule
 
                 parent_rule = rule_parents[(rule_count, rule)][0]
                 parent_t = rule_pos_map[parent_rule]
@@ -326,9 +331,9 @@ def parse_hs_dataset():
             can_fully_reconstructed_examples_num += 1
 
         # train, valid, test splits
-        if 0 <= idx < 533:
+        if 0 <= idx < 300:
             train_data.add(example)
-        elif idx < 599:
+        elif idx < 400:
             dev_data.add(example)
         else:
             test_data.add(example)
@@ -355,7 +360,7 @@ def parse_hs_dataset():
     test_data.init_data_matrices(max_query_length=70, max_example_action_num=350)
 
     serialize_to_file((train_data, dev_data, test_data),
-                      'data/hs.freq{WORD_FREQ_CUT_OFF}.max_action350.pre_suf.unary_closure.bin'.format(WORD_FREQ_CUT_OFF=WORD_FREQ_CUT_OFF))
+                      '../../data/sql.freq{WORD_FREQ_CUT_OFF}.max_action350.pre_suf.unary_closure.bin'.format(WORD_FREQ_CUT_OFF=WORD_FREQ_CUT_OFF))
 
     return train_data, dev_data, test_data
 
@@ -394,10 +399,10 @@ def dump_data_for_evaluation(data_type='django', data_file='', max_query_length=
 
 
 if __name__ == '__main__':
-    init_logging('py.log')
+    init_logging('sql.log')
     # rule_vs_node_stat()
     # process_heart_stone_dataset()
-    parse_hs_dataset()
+    parse_dataset()
     # dump_data_for_evaluation(data_file='data/django.cleaned.dataset.freq5.par_info.refact.space_only.bin')
     # dump_data_for_evaluation(data_type='hs', data_file='data/hs.freq3.pre_suf.unary_closure.bin')
     # code_file = '/Users/yinpengcheng/Research/SemanticParsing/CodeGeneration/en-django/all.code'

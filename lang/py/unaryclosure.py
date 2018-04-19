@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 from astnode import ASTNode
-from lang.py.grammar import type_str_to_type
+from lang.sql.grammar import type_str_to_type
 from lang.py.parse import parse
 from collections import Counter
 import re
@@ -140,7 +140,8 @@ def compressed_ast_to_normal(parse_tree):
             c = m.group('child')
             cl = m.group('clabel')
 
-            p_type = type_str_to_type(p)
+            # print(p)
+            # p_type = type_str_to_type(p)
             c_type = type_str_to_type(c)
 
             node = ASTNode(c_type, label=cl)

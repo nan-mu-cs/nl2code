@@ -1,6 +1,6 @@
 # x is a type
 def typename(x):
-    if isinstance(x, str):
+    if isinstance(x, basestring):
         return x
     return x.__name__
 
