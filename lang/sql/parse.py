@@ -6,7 +6,7 @@ from cStringIO import StringIO
 from tokenize import generate_tokens
 
 from astnode import ASTNode
-from lang.sql.grammar import is_compositional_leaf, PY_AST_NODE_FIELDS, NODE_FIELD_BLACK_LIST, SQLGrammar
+from lang.sql.grammar import is_compositional_leaf, PY_AST_NODE_FIELDS, NODE_FIELD_BLACK_LIST, SQLGrammar,TERMINAL_AST_TYPES
 from lang.util import escape
 from lang.util import typename
 
@@ -96,6 +96,56 @@ def sql_ast_to_parse_tree(node):
 #         tree.add_child(child)
 #
 #     return tree
+
+
+def decode_tree_to_sql_ast(decode_tree):
+    # from lang.py.unaryclosure import compressed_ast_to_normal
+
+    # compressed_ast_to_normal(decode_tree)
+    decode_tree = decode_tree.children[0]
+    terminals = decode_tree.get_leaves()
+
+    for terminal in terminals:
+        if terminal.value is not None and type(terminal.value) is basestring:
+            if terminal.value.endswith('<eos>'):
+                terminal.value = terminal.value[:-5]
+
+        # if terminal.type in {int, float, str, bool}:
+        #     # cast to target data type
+        #     terminal.value = terminal.type(terminal.value)
+
+    ast_tree = parse_tree_to_sql_ast(decode_tree)
+
+    return ast_tree
+
+def parse_tree_to_sql_ast(tree):
+    node_type = tree.type
+    node_label = tree.label
+
+    # remove root
+    if node_type == 'root':
+        return parse_tree_to_sql_ast(tree.children[0])
+
+    node = {
+        "type": node_type
+    }
+
+    if node_type == "literal":
+        node["value"] = tree.value
+        return node
+    if node_type == "identifier":
+        node["name"] = tree.value
+        return node
+    for child_node in tree.children:
+        if child_node.type in TERMINAL_AST_TYPES:
+            node[child_node.type] = child_node.value
+        elif child_node.type[-1] == "*":
+            node[child_node.type] = []
+            for item in child_node.children:
+                node[child_node.type].append(parse_tree_to_sql_ast(item))
+        else:
+            node[child_node.type] = parse_tree_to_sql_ast(child_node)
+    return node
 
 
 def parse_tree_to_python_ast(tree):

@@ -16,7 +16,7 @@ device="gpu"
 #fi
 
 dataset="sql.freq3.max_action350.pre_suf.unary_closure.bin"
-commandline="-batch_size 10 -max_epoch 50 -save_per_batch 4000 -decode_max_time_step 100 -optimizer adam -rule_embed_dim 128 -node_embed_dim 64 "
+commandline="-batch_size 10 -max_epoch 20 -save_per_batch 4000 -decode_max_time_step 100 -optimizer adam -rule_embed_dim 128 -node_embed_dim 64 "
 datatype="sql"
 # train the model
 THEANO_FLAGS="mode=FAST_RUN,device=${device},floatX=float32" python -u code_gen.py \

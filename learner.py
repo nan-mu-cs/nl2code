@@ -146,12 +146,13 @@ class Learner(object):
                          epoch,
                          loss / cum_nb_examples,
                          time.time() - begin_time)
-
+            if (epoch+1)%10 == 0:
+                np.savez(os.path.join(config.output_dir, 'model-epoch{}.npz'.format(epoch)), self.model.pull_params())
             if early_stop:
                 break
 
         logging.info('training finished, save the best model')
-        np.savez(os.path.join(config.output_dir, 'model.npz'), **best_model_params)
+        # np.savez(os.path.join(config.output_dir, 'model.npz'), **best_model_params)
 
         if config.data_type == 'django' or config.data_type == 'hs':
             logging.info('save the best model by accuracy')

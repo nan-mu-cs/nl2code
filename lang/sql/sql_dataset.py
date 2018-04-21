@@ -192,9 +192,9 @@ def parse_dataset():
     parse_trees = [e['parse_tree'] for e in data]
 
     # apply unary closures
-    unary_closures = get_top_unary_closures(parse_trees, k=20)
-    for parse_tree in parse_trees:
-        apply_unary_closures(parse_tree, unary_closures)
+    # unary_closures = get_top_unary_closures(parse_trees, k=20)
+    # for parse_tree in parse_trees:
+    #     apply_unary_closures(parse_tree, unary_closures)
 
     # build the grammar
     grammar = get_grammar(parse_trees)
