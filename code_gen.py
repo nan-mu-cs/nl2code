@@ -179,7 +179,7 @@ if __name__ == '__main__':
         if args.data_type == 'ifttt':
             decode_results = decode_and_evaluate_ifttt_by_split(model, test_data)
         elif args.data_type == "sql":
-            decode_results = decode_python_dataset(model, test_data)
+            decode_results = decode_sql_dataset(model, test_data)
         else:
             dataset = eval(args.type)
             decode_results = decode_python_dataset(model, dataset)
