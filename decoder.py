@@ -32,7 +32,7 @@ def decode_sql_dataset(model, dataset, verbose=True):
         if cum_num % 50 == 0 and verbose:
             print '%d examples so far ...' % cum_num
 
-        decode_results.append(exg_decode_results)
+        decode_results.append(exg_decode_results,indent=4)
         f = open("decode_result.json","w")
         json.dump(decode_results,f)
         f.close()
