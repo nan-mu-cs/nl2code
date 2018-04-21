@@ -1,6 +1,6 @@
 import traceback
 import config
-
+import json
 from model import *
 
 def decode_sql_dataset(model, dataset, verbose=True):
@@ -33,7 +33,9 @@ def decode_sql_dataset(model, dataset, verbose=True):
             print '%d examples so far ...' % cum_num
 
         decode_results.append(exg_decode_results)
-
+        f = open("decode_result.json","w")
+        json.dump(decode_results,f)
+        f.close()
     return decode_results
 
 def decode_python_dataset(model, dataset, verbose=True):
