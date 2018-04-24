@@ -279,7 +279,7 @@ def parse_dataset():
 
                 actions.append(action)
             else:
-                assert rule.is_leaf,rule
+                assert rule.is_leaf,(rule.type,rule.value,rule.label)
 
                 parent_rule = rule_parents[(rule_count, rule)][0]
                 parent_t = rule_pos_map[parent_rule]

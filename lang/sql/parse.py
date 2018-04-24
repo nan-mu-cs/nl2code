@@ -14,12 +14,14 @@ from lang.util import typename
 def sql_ast_to_parse_tree(node):
     node_type = node["type"]
     if node_type == "literal":
-        return ASTNode(node_type, value=node["value"])
+        return ASTNode(node_type, label=node["variant"],value=node["value"])
     if node_type == "identifier":
-        return ASTNode(node_type,value=node["name"])
+        return ASTNode(node_type,label=node["variant"],value=node["name"])
     tree = ASTNode(node_type)
     for key in node:
-        if key == "type" or key == "variant" or key == "format":
+        if key == "type":
+            if node[key] == "literal":
+                print(node)
             continue
         if isinstance(node[key],basestring) or isinstance(node[key],bool):
             child = ASTNode(key,value=node[key])
@@ -104,7 +106,7 @@ def decode_tree_to_sql_ast(decode_tree):
     # compressed_ast_to_normal(decode_tree)
     decode_tree = decode_tree.children[0]
     terminals = decode_tree.get_leaves()
-
+    # print(terminals)
     for terminal in terminals:
         if terminal.value is not None and type(terminal.value) is basestring:
             if terminal.value.endswith('<eos>'):
@@ -131,20 +133,54 @@ def parse_tree_to_sql_ast(tree):
     }
 
     if node_type == "literal":
-        node["value"] = tree.value
+        if tree.value.endswith('<eos>'):
+            val = tree.value[:-5]
+        else:
+            val = tree.value
+        node["value"] = val
+        node["variant"] = tree.label
         return node
     if node_type == "identifier":
-        node["name"] = tree.value
+        if tree.value.endswith('<eos>'):
+            val = tree.value[:-5]
+        else:
+            val = tree.value
+        node["name"] = val
+        node["variant"] = tree.label
         return node
     for child_node in tree.children:
+        child = {}
         if child_node.type in TERMINAL_AST_TYPES:
-            node[child_node.type] = child_node.value
+            if child_node.value.endswith('<eos>'):
+                val = child_node.value[:-5]
+            else:
+                val = child_node.value
+            if child_node.type == "identifier":
+                child = {
+                    "type":"identifier",
+                    "variant":child_node.label,
+                    "name":val
+                }
+            elif child_node.type == "literal":
+                child = {
+                    "type": "identifier",
+                    "variant": child_node.label,
+                    "value": val
+                }
+            else:
+                child = val
+            node[child_node.type] = child
         elif child_node.type[-1] == "*":
-            node[child_node.type] = []
+            key = child_node.type[:len(child_node.type)-1]
+            child = []
             for item in child_node.children:
-                node[child_node.type].append(parse_tree_to_sql_ast(item))
+                child.append(parse_tree_to_sql_ast(item))
+            node[key] = child
         else:
-            node[child_node.type] = parse_tree_to_sql_ast(child_node)
+            # child = {
+            #     type:""
+            # }
+            node[child_node.type] = parse_tree_to_sql_ast(child_node.children[0])
     return node
 
 

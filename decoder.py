@@ -18,8 +18,9 @@ def decode_sql_dataset(model, dataset, verbose=True):
         for cid, cand in enumerate(cand_list[:10]):
             try:
                 ast_tree = decode_tree_to_sql_ast(cand.tree)
+                # print(ast_tree)
                 # code = astor.to_source(ast_tree)
-                exg_decode_results.append((cid, cand, ast_tree))
+                exg_decode_results.append((cid, ast_tree))
             except:
                 if verbose:
                     print "Exception in converting tree to code:"

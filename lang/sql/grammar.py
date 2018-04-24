@@ -696,7 +696,8 @@ TERMINAL_AST_TYPES = {
     "distinct",
     "direction",
     "operator",
-    "alias"
+    "alias",
+    "variant"
 }
 
 
