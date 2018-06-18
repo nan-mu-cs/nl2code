@@ -12,6 +12,8 @@ from lang.util import typename
 
 
 def sql_ast_to_parse_tree(node):
+    if isinstance(node,basestring):
+        print(node)
     node_type = node["type"]
     if node_type == "literal":
         return ASTNode(node_type, label=node["variant"],value=node["value"])
@@ -108,6 +110,7 @@ def decode_tree_to_sql_ast(decode_tree):
     terminals = decode_tree.get_leaves()
     # print(terminals)
     for terminal in terminals:
+        # terminal.value = 'terminal'
         if terminal.value is not None and type(terminal.value) is basestring:
             if terminal.value.endswith('<eos>'):
                 terminal.value = terminal.value[:-5]
@@ -133,15 +136,17 @@ def parse_tree_to_sql_ast(tree):
     }
 
     if node_type == "literal":
-        if tree.value.endswith('<eos>'):
-            val = tree.value[:-5]
-        else:
-            val = tree.value
+        # if tree.value.endswith('<eos>'):
+        #     val = tree.value[:-5]
+        # else:
+        #     val = tree.value
+        val = "terminal"
         node["value"] = val
-        node["variant"] = tree.label
+        node["variant"] = "text"
         return node
     if node_type == "identifier":
         if tree.value.endswith('<eos>'):
+            # print("has eos!!!!")
             val = tree.value[:-5]
         else:
             val = tree.value
@@ -152,6 +157,7 @@ def parse_tree_to_sql_ast(tree):
         child = {}
         if child_node.type in TERMINAL_AST_TYPES:
             if child_node.value.endswith('<eos>'):
+                # print("has eos!!!!")
                 val = child_node.value[:-5]
             else:
                 val = child_node.value
@@ -164,8 +170,8 @@ def parse_tree_to_sql_ast(tree):
             elif child_node.type == "literal":
                 child = {
                     "type": "identifier",
-                    "variant": child_node.label,
-                    "value": val
+                    "variant": "text",
+                    "value": "terminal"
                 }
             else:
                 child = val
@@ -379,11 +385,13 @@ def parse(code):
 
 def parse_raw(ast):
     # py_ast = ast.parse(code)
-
+    # print ast
     # tree = python_ast_to_parse_tree(py_ast.body[0])
-
-    tree = sql_ast_to_parse_tree(ast)
-    tree = add_root(tree)
+    try:
+        tree = sql_ast_to_parse_tree(ast)
+        tree = add_root(tree)
+    except :
+        print(ast)
 
     return tree
 

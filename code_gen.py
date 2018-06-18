@@ -21,6 +21,7 @@ from nn.utils.io_utils import deserialize_from_file, serialize_to_file
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-data')
+parser.add_argument('-ast_output_path')
 parser.add_argument('-random_seed', default=181783, type=int)
 parser.add_argument('-output_dir', default='.outputs')
 parser.add_argument('-model', default=None)
@@ -34,7 +35,7 @@ parser.add_argument('-target_vocab_size', default=0, type=int)
 parser.add_argument('-rule_num', default=0, type=int)
 parser.add_argument('-node_num', default=0, type=int)
 
-parser.add_argument('-word_embed_dim', default=128, type=int)
+parser.add_argument('-word_embed_dim', default=300, type=int)
 parser.add_argument('-rule_embed_dim', default=256, type=int)
 parser.add_argument('-node_embed_dim', default=256, type=int)
 parser.add_argument('-encoder_hidden_dim', default=256, type=int)
@@ -73,8 +74,8 @@ parser.add_argument('-clip_grad', default=0., type=float)
 parser.add_argument('-train_patience', default=10, type=int)
 parser.add_argument('-max_epoch', default=50, type=int)
 parser.add_argument('-batch_size', default=10, type=int)
-parser.add_argument('-valid_per_batch', default=4000, type=int)
-parser.add_argument('-save_per_batch', default=4000, type=int)
+parser.add_argument('-valid_per_batch', default=4000000000000, type=int)
+parser.add_argument('-save_per_batch', default=400000000000000, type=int)
 parser.add_argument('-valid_metric', default='bleu')
 
 # decoding
@@ -126,9 +127,14 @@ if __name__ == '__main__':
     train_data, dev_data, test_data = deserialize_from_file(args.data)
 
     if not args.source_vocab_size:
+        print("source vocab size".format(train_data.annot_vocab.size))
         args.source_vocab_size = train_data.annot_vocab.size
     if not args.target_vocab_size:
+        print("target vocab size".format(train_data.terminal_vocab.size))
         args.target_vocab_size = train_data.terminal_vocab.size
+
+    print("grammer:{}".format(len(train_data.grammar)))
+
     if not args.rule_num:
         args.rule_num = len(train_data.grammar.rules)
     if not args.node_num:
@@ -150,7 +156,7 @@ if __name__ == '__main__':
     logging.info('target vocab size: %d', train_data.terminal_vocab.size)
 
     if args.operation in ['train', 'decode', 'interactive']:
-        model = Model()
+        model = Model(train_data.annot_vocab)
         model.build()
 
         if args.model:
@@ -179,7 +185,7 @@ if __name__ == '__main__':
         if args.data_type == 'ifttt':
             decode_results = decode_and_evaluate_ifttt_by_split(model, test_data)
         elif args.data_type == "sql":
-            decode_results = decode_sql_dataset(model, test_data)
+            decode_results = decode_sql_dataset(model, test_data,args.ast_output_path)
         else:
             dataset = eval(args.type)
             decode_results = decode_python_dataset(model, dataset)

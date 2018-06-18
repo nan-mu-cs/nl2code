@@ -3,20 +3,24 @@
  */
 var fs = require('fs');
 var sqliteParser = require('sqlite-parser');
-var parserTransform = sqliteParser.createParser();
-var singleNodeTransform = sqliteParser.createStitcher();
-var readStream = fs.createReadStream('../../data/data.sql');
-var writeStream = fs.createWriteStream('../../data/ast.json');
 
-readStream.pipe(parserTransform);
-parserTransform.pipe(singleNodeTransform);
-singleNodeTransform.pipe(writeStream);
 
-parserTransform.on('error', function (err) {
-  console.error(err);
-  process.exit(1);
-});
+// change this
+var input_file_path = "./test.sql";
+var output_file_path = "../../data/data/test-ast.json";
 
-writeStream.on('finish', function () {
-  process.exit(0);
-});
+var query = fs.readFileSync(input_file_path, 'utf8');
+sqliteParser(query, function (err, ast) {
+      if (err) {
+        var location = err.location != null ? "[" + err.location.start.line +
+        ", " + err.location.start.column + "] " : "";
+        console.log(location + err.message);
+        return;
+      }
+      ast = JSON.stringify(ast);
+      fs.writeFile(output_file_path, ast, 'utf8',function () {
+          console.log("successful write to file");
+      });
+      // console.log(ast);
+      // writer(ast);
+    });

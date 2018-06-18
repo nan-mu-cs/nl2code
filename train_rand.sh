@@ -1,5 +1,5 @@
-output="runs"
-device="cpu"
+output="runs_rand"
+device="cuda0"
 
 #if [ "$1" == "hs" ]; then
 #	# hs dataset
@@ -15,29 +15,33 @@ device="cpu"
 #	datatype="django"
 #fi
 
-# train the model
-THEANO_FLAGS="mode=FAST_RUN,device=${device},floatX=float32" python -u code_gen.py \
-	-data_type ${datatype} \
-	-data data/${dataset} \
-	-output_dir ${output} \
-	${commandline} \
-	train
+dataset="data_radn_split/dataset.bin"
+commandline="-batch_size 10 -max_epoch 50 -save_per_batch 4000 -decode_max_time_step 100 -optimizer adam -rule_embed_dim 128 -node_embed_dim 64 "
+datatype="sql"
+ #train the model
+#THEANO_FLAGS="mode=FAST_RUN,device=${device},floatX=float32" python -u code_gen.py \
+#	-data_type ${datatype} \
+#	-data data/${dataset} \
+#	-output_dir ${output} \
+#	${commandline} \
+#	train
 
+model="model-epoch29.npz"
 # decode testing set, and evaluate the model which achieves the best bleu and accuracy, resp.
-for model in "model.best_bleu.npz" "model.best_acc.npz"; do
+#for model in "model.best_bleu.npz" "model.best_acc.npz"; do
 	THEANO_FLAGS="mode=FAST_RUN,device=${device},floatX=float32" python code_gen.py \
 	-data_type ${datatype} \
 	-data data/${dataset} \
 	-output_dir ${output} \
-	-model ${output}/${model} \
+	-model /home/lily/rz268/runs_rand/${model} \
 	${commandline} \
 	decode \
 	-saveto ${output}/${model}.decode_results.test.bin
 
-	python code_gen.py \
-		-data_type ${datatype} \
-		-data data/${dataset} \
-		-output_dir ${output} \
-		evaluate \
-		-input ${output}/${model}.decode_results.test.bin
-done
+#	python code_gen.py \
+#		-data_type ${datatype} \
+#		-data data/${dataset} \
+#		-output_dir ${output} \
+#		evaluate \
+#		-input ${output}/${model}.decode_results.test.bin
+#done

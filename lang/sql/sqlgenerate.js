@@ -4,7 +4,7 @@
 import 'babel-polyfill';
 import {map, join, head, compose, curry, toUpper, prop, equals, isEmpty, F, isArrayLike, concat, __, pluck, contains} from 'ramda';
 
-const INDENT = '\t';
+const INDENT = ' ';
 const LINE_END = '\n';
 
 // This allows calling a function recursivly based on node type. Some of the
@@ -66,7 +66,7 @@ var Generator = {
             }
             if (n.from) {
                 const from = recurser(n.from);
-                str.push(`${INDENT}FROM (${from})${LINE_END}`);
+                str.push(`${INDENT}FROM ${from}${LINE_END}`);
             }
             if (n.where) {
                 const where = recurser(head(n.where));
@@ -259,19 +259,19 @@ var Generator = {
         table : (n) => {
             const alias =  (n.alias)  ? `AS ${n.alias}` : '';
             const index = (n.index) ? recurse(Generator)(n.index) : '';
-            return `\`${n.name}\` ${alias} ${index}`;
+            return `${n.name} ${alias} ${index}`;
         },
         index : (n) => `INDEXED BY ${n.name}`,
         column : (n) => {
             const recurser = recurse(Generator);
-            const alias =  (n.alias) ? `AS \`${n.alias}\`` : '';
+            const alias =  (n.alias) ? `AS ${n.alias}\`` : '';
             const index = (n.index) ? recurser(n.index) : '';
-            return `\`${n.name}\` ${alias} ${index}`;
+            return `${n.name} ${alias} ${index}`;
         },
         'function' : (n) => n.name,
         expression : (n) => {
             const m = mapr(Generator);
-            return `\`${n.name}\`(${m(n.columns)})`;
+            return `${n.name}(${m(n.columns)})`;
         },
         view : (n) => n.name,
         savepoint : (n) => n.name,
@@ -374,13 +374,13 @@ var Generator = {
         const recurser = recurse(Generator);
         const name = toUpper(recurser(n.name));
         const args = recurser(n.args);
-        const alias =  (n.alias)  ? `AS \`${n.alias}\`` : '';
+        const alias =  (n.alias)  ? `AS ${n.alias}\`` : '';
         return `${name}(${args}) ${alias}`;
     },
     module : (n) => {
         const recurser = recurse(Generator);
         const args = recurser(n.args);
-        const alias =  (n.alias)  ? `AS \`${n.alias}\`` : '';
+        const alias =  (n.alias)  ? `AS ${n.alias}\`` : '';
         return `${n.name}(${args}) ${alias}`;
     },
     event : ({event, occurs, of}) => {

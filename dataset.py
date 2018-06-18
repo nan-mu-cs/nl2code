@@ -129,9 +129,14 @@ def gen_vocab(tokens, vocab_size=3000, freq_cutoff=5):
 
     return vocab
 
+def gen_schema_vocab(tokens,vocab):
+    for token in tokens:
+        vocab.insert_token(token)
+    vocab.complete()
+    return vocab
 
 class DataEntry:
-    def __init__(self, raw_id, query, parse_tree, code, actions, meta_data=None):
+    def __init__(self, raw_id, query, parse_tree, code, actions, mask,meta_data=None):
         self.raw_id = raw_id
         self.eid = -1
         # FIXME: rename to query_token
@@ -140,6 +145,7 @@ class DataEntry:
         self.actions = actions
         self.code = code
         self.meta_data = meta_data
+        self.mask = mask
 
     @property
     def data(self):
@@ -157,13 +163,14 @@ class DataEntry:
 
 
 class DataSet:
-    def __init__(self, annot_vocab, terminal_vocab, grammar, name='train_data'):
+    def __init__(self, annot_vocab, terminal_vocab, grammar, db_mask,name='train_data'):
         self.annot_vocab = annot_vocab
         self.terminal_vocab = terminal_vocab
         self.name = name
         self.examples = []
         self.data_matrix = dict()
         self.grammar = grammar
+        self.db_mask = db_mask
 
     def add(self, example):
         example.eid = len(self.examples)
@@ -197,7 +204,7 @@ class DataSet:
 
     def get_prob_func_inputs(self, ids):
         order = ['query_tokens', 'tgt_action_seq', 'tgt_action_seq_type',
-                 'tgt_node_seq', 'tgt_par_rule_seq', 'tgt_par_t_seq']
+                 'tgt_node_seq', 'tgt_par_rule_seq', 'tgt_par_t_seq','mask']
 
         max_src_seq_len = max(len(self.examples[i].query) for i in ids)
         max_tgt_seq_len = max(len(self.examples[i].actions) for i in ids)
@@ -209,6 +216,8 @@ class DataSet:
         for entry in order:
             if entry == 'query_tokens':
                 data.append(self.data_matrix[entry][ids, :max_src_seq_len])
+            elif entry == 'mask':
+                data.append(self.data_matrix[entry][ids,:])
             else:
                 data.append(self.data_matrix[entry][ids, :max_tgt_seq_len])
 
@@ -229,11 +238,11 @@ class DataSet:
         tgt_par_t_seq = self.data_matrix['tgt_par_t_seq'] = np.zeros((self.count, max_example_action_num), dtype='int32')
         tgt_action_seq = self.data_matrix['tgt_action_seq'] = np.zeros((self.count, max_example_action_num, 3), dtype='int32')
         tgt_action_seq_type = self.data_matrix['tgt_action_seq_type'] = np.zeros((self.count, max_example_action_num, 3), dtype='int32')
-
+        mask = self.data_matrix['mask'] = np.zeros((self.count, terminal_vocab.size),dtype='int32')
         for eid, example in enumerate(self.examples):
             exg_query_tokens = example.query[:max_query_length]
             exg_action_seq = example.actions[:max_example_action_num]
-
+            mask[eid] = example.mask
             for tid, token in enumerate(exg_query_tokens):
                 token_id = annot_vocab[token]
 

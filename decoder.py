@@ -3,7 +3,7 @@ import config
 import json
 from model import *
 
-def decode_sql_dataset(model, dataset, verbose=True):
+def decode_sql_dataset(model, dataset, ast_output_path,verbose=True):
     from lang.sql.parse import decode_tree_to_sql_ast
     if verbose:
         logging.info('decoding [%s] set, num. examples: %d', dataset.name, dataset.count)
@@ -34,8 +34,8 @@ def decode_sql_dataset(model, dataset, verbose=True):
             print '%d examples so far ...' % cum_num
 
         decode_results.append(exg_decode_results)
-        f = open("decode_result.json","w")
-        json.dump(decode_results,f,indent=4)
+        f = open(ast_output_path,"w")
+        json.dump(decode_results,f)
         f.close()
     return decode_results
 

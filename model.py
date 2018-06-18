@@ -28,11 +28,11 @@ from components import Hyp, PointerNet, CondAttLSTM
 sys.setrecursionlimit(50000)
 
 class Model:
-    def __init__(self):
+    def __init__(self,vocab):
         # self.node_embedding = Embedding(config.node_num, config.node_embed_dim, name='node_embed')
 
         self.query_embedding = Embedding(config.source_vocab_size, config.word_embed_dim, name='query_embed')
-
+        self.query_embedding.init_pretrained("glove/glove.42B.300d.txt",vocab)
         if config.encoder == 'bilstm':
             self.query_encoder_lstm = BiLSTM(config.word_embed_dim, config.encoder_hidden_dim / 2, return_sequences=True,
                                              name='query_encoder_lstm')
@@ -64,7 +64,7 @@ class Model:
                                                  name='decoder_hidden_state_W_token')
 
         # self.rule_encoder_lstm.params
-        self.params = self.query_embedding.params + self.query_encoder_lstm.params + \
+        self.params = self.query_encoder_lstm.params + \
                       self.decoder_lstm.params + self.src_ptr_net.params + self.terminal_gen_softmax.params + \
                       [self.rule_embedding_W, self.rule_embedding_b, self.node_embedding, self.vocab_embedding_W, self.vocab_embedding_b] + \
                       self.decoder_hidden_state_W_rule.params + self.decoder_hidden_state_W_token.params
@@ -93,6 +93,8 @@ class Model:
 
         # (batch_size, max_query_length)
         query_tokens = ndim_itensor(2, 'query_tokens')
+
+        mask = ndim_itensor(2, 'mask')
 
         # (batch_size, max_query_length, query_token_embed_dim)
         # (batch_size, max_query_length)
@@ -133,7 +135,7 @@ class Model:
 
         # (batch_size, max_example_action_num)
         tgt_action_seq_mask = T.any(tgt_action_seq_type, axis=-1)
-        
+
         # decoder_hidden_states: (batch_size, max_example_action_num, lstm_hidden_state)
         # ctx_vectors: (batch_size, max_example_action_num, encoder_hidden_dim)
         decoder_hidden_states, _, ctx_vectors = self.decoder_lstm(decoder_input,
@@ -163,8 +165,9 @@ class Model:
         terminal_gen_action_prob = self.terminal_gen_softmax(decoder_hidden_states)
 
         # (batch_size, max_example_action_num, target_vocab_size)
+        logits = T.dot(decoder_hidden_state_trans_token, T.transpose(self.vocab_embedding_W)) + self.vocab_embedding_b
         vocab_predict = softmax(T.dot(decoder_hidden_state_trans_token, T.transpose(self.vocab_embedding_W)) + self.vocab_embedding_b)
-
+        vocab_predict = softmax(logits*mask + (T.min(logits)-1)*(1-mask))
         # (batch_size, max_example_action_num, lstm_hidden_state + encoder_hidden_dim)
         ptr_net_decoder_state = T.concatenate([decoder_hidden_states, ctx_vectors], axis=-1)
 
@@ -198,7 +201,7 @@ class Model:
 
         # let's build the function!
         train_inputs = [query_tokens, tgt_action_seq, tgt_action_seq_type,
-                        tgt_node_seq, tgt_par_rule_seq, tgt_par_t_seq]
+                        tgt_node_seq, tgt_par_rule_seq, tgt_par_t_seq,mask]
         optimizer = optimizers.get(config.optimizer)
         optimizer.clip_grad = config.clip_grad
         updates, grads = optimizer.get_updates(self.params, loss)
@@ -253,6 +256,8 @@ class Model:
         # (batch_size, 1)
         parent_t_reshaped = T.shape_padright(parent_t)
 
+        # mask = ndim_itensor(2, 'mask')
+
         query_embed = self.query_encoder_lstm(query_token_embed, mask=query_token_embed_mask,
                                               dropout=config.dropout, train=False)
 
@@ -300,6 +305,9 @@ class Model:
         gen_action_prob = self.terminal_gen_softmax(decoder_next_state)
 
         vocab_prob = softmax(T.dot(decoder_next_state_trans_token, T.transpose(self.vocab_embedding_W)) + self.vocab_embedding_b)
+        # logits = T.dot(decoder_next_state_trans_token, T.transpose(self.vocab_embedding_W)) + self.vocab_embedding_b
+        # vocab_predict = softmax(T.dot(decoder_hidden_state_trans_token, T.transpose(self.vocab_embedding_W)) + self.vocab_embedding_b)
+        # vocab_prob = softmax(logits * mask + (T.min(logits) - 1) * (1 - mask))
 
         ptr_net_decoder_state = T.concatenate([decoder_next_state_dim3, ctx_vectors], axis=-1)
 
@@ -330,6 +338,7 @@ class Model:
         rule_embedding = self.rule_embedding_W.get_value(borrow=True)
 
         query_tokens = example.data[0]
+        mask = example.mask
 
         query_embed, query_token_embed_mask = self.decoder_func_init(query_tokens)
 

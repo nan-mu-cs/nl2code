@@ -146,8 +146,7 @@ class Learner(object):
                          epoch,
                          loss / cum_nb_examples,
                          time.time() - begin_time)
-            if (epoch+1)%10 == 0:
-                np.savez(os.path.join(config.output_dir, 'model-epoch{}.npz'.format(epoch)), **self.model.pull_params())
+            np.savez(os.path.join(config.output_dir, 'model-epoch{}.npz'.format(epoch)), **self.model.pull_params())
             if early_stop:
                 break
 
